@@ -1,48 +1,60 @@
 pipeline {
     agent any
     environment {
-        AZURE_CLIENT_ID = credentials('azure-client-id-tenant')
-        AZURE_CLIENT_SECRET = credentials('azure-client-secret')
+        AZURE_CLIENT_ID = credentials('azure-client-id')
+        AZURE_SECRET = credentials('azure-client-secret')
+        AZURE_TENANT = credentials('azure-tenant-id')
     }
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main', url: 'https://github.com/mohammedfurkhan/proj10.git'
+                checkout scm
             }
         }
         stage('Login to Azure') {
             steps {
-                sh '''
-                az login --service-principal -u $AZURE_CLIENT_ID_USR -p $AZURE_CLIENT_SECRET --tenant $AZURE_CLIENT_ID_PSW
-                '''
+                bat """
+                    az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_SECRET% --tenant %AZURE_TENANT%
+                """
             }
         }
         stage('Terraform Init') {
             steps {
-                sh 'terraform init'
+                dir('terraform') {
+                    bat """
+                        terraform init
+                    """
+                }
             }
         }
         stage('Terraform Plan') {
             steps {
-                sh 'terraform plan'
+                dir('terraform') {
+                    bat """
+                        terraform plan -out=tfplan
+                    """
+                }
             }
         }
         stage('Terraform Apply') {
             steps {
-                sh 'terraform apply -auto-approve'
+                dir('terraform') {
+                    bat """
+                        terraform apply -auto-approve tfplan
+                    """
+                }
             }
         }
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('My SonarQube Server') {
-                    sh 'sonar-scanner'
+                withSonarQubeEnv('SonarQube') {
+                    bat 'mvn clean verify sonar:sonar'
                 }
             }
         }
     }
     post {
         always {
-            echo 'Cleaning up...'
             cleanWs()
         }
     }
