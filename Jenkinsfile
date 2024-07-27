@@ -1,44 +1,49 @@
 pipeline {
     agent any
-
+    environment {
+        AZURE_CLIENT_ID = credentials('azure-client-id-tenant')
+        AZURE_CLIENT_SECRET = credentials('azure-client-secret')
+    }
     stages {
-        stage('Clone Git Repo') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', credentialsId: '60017995-e2e3-439e-9dbd-7fda283c0015', url: 'https://github.com/mohammedfurkhan/proj10.git'
+                git 'https://github.com/mohammedfurkhan/proj10.git'
             }
         }
-        stage('Version') {
+        stage('Login to Azure') {
             steps {
-                sh ''' 
-                terraform version
-                    az --version              
+                sh '''
+                az login --service-principal -u $AZURE_CLIENT_ID_USR -p $AZURE_CLIENT_SECRET --tenant $AZURE_CLIENT_ID_PSW
                 '''
             }
         }
-        stage('Init') {
+        stage('Terraform Init') {
             steps {
                 sh 'terraform init'
             }
         }
-        stage('Init - ugrade') {
+        stage('Terraform Plan') {
             steps {
-                sh 'terraform init -upgrade'
+                sh 'terraform plan'
             }
         }
-        stage('Clean up ') {
-            steps {
-                sh 'terraform destroy -auto-approve'
-            }
-        }
-        stage('validate') {
-            steps {
-                sh 'terraform validate'
-            }
-        }
-        stage('Apply') {
+        stage('Terraform Apply') {
             steps {
                 sh 'terraform apply -auto-approve'
             }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('My SonarQube Server') {
+                    sh 'sonar-scanner'
+                }
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Cleaning up...'
+            cleanWs()
         }
     }
 }
