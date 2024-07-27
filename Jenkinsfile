@@ -1,54 +1,50 @@
 pipeline {
     agent any
     environment {
-        AZURE_CLIENT_ID = credentials('azure-client-id')
-        AZURE_SECRET = credentials('azure-client-secret')
-        AZURE_TENANT = credentials('azure-tenant-id')
+        AZURE_TENANT_ID = credentials('azure-tenant-id')
+        AZURE_CLIENT_ID = credentials('azure-client-id-tenant')
+        AZURE_CLIENT_SECRET = credentials('azure-client-secret')
     }
     stages {
-        stage('Checkout SCM') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
         stage('Login to Azure') {
             steps {
-                bat """
-                    az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_SECRET% --tenant %AZURE_TENANT%
-                """
+                script {
+                    bat '''
+                    az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%
+                    '''
+                }
             }
         }
         stage('Terraform Init') {
             steps {
-                dir('terraform') {
-                    bat """
-                        terraform init
-                    """
+                script {
+                    bat 'terraform init'
                 }
             }
         }
         stage('Terraform Plan') {
             steps {
-                dir('terraform') {
-                    bat """
-                        terraform plan -out=tfplan
-                    """
+                script {
+                    bat 'terraform plan'
                 }
             }
         }
         stage('Terraform Apply') {
             steps {
-                dir('terraform') {
-                    bat """
-                        terraform apply -auto-approve tfplan
-                    """
+                script {
+                    bat 'terraform apply -auto-approve'
                 }
             }
         }
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    bat 'mvn clean verify sonar:sonar'
+                script {
+                    bat 'sonar-scanner'
                 }
             }
         }
@@ -56,6 +52,12 @@ pipeline {
     post {
         always {
             cleanWs()
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
