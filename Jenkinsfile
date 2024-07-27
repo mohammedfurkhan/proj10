@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/mohammedfurkhan/proj10.git'
+                git branch: 'main', url: 'https://github.com/mohammedfurkhan/proj10.git'
             }
         }
         stage('Login to Azure') {
