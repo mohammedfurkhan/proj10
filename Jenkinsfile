@@ -1,7 +1,6 @@
 pipeline {
     agent any
     environment {
-        AZURE_TENANT_ID = credentials('azure-tenant-id')
         AZURE_CLIENT_ID = credentials('azure-client-id-tenant')
         AZURE_CLIENT_SECRET = credentials('azure-client-secret')
     }
